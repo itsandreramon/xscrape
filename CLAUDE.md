@@ -64,3 +64,14 @@ Run shellcheck before committing shell scripts:
 ```bash
 ./scripts/lint.sh
 ```
+
+## Troubleshooting
+
+### Chrome profile locked
+
+If Chrome fails to start with "profile appears to be in use", the lock files from a previous container need to be removed:
+
+```bash
+docker exec xscrape rm -f /data/chrome-profile/SingletonLock /data/chrome-profile/SingletonSocket /data/chrome-profile/SingletonCookie
+docker restart xscrape
+```
