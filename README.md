@@ -153,8 +153,13 @@ To use xscrape as an OpenClaw skill:
 ### 1. Install skill
 
 ```bash
-# copy skill to openclaw skills directory
-scp -r SKILL.md root@<VPS_IP>:/root/.openclaw/skills/xscrape/
+# copy skill to openclaw skills directory (mounted into container)
+# host path: /root/.openclaw/skills/xscrape/
+# container path: /home/node/.openclaw/skills/xscrape/
+scp SKILL.md root@<VPS_IP>:/root/.openclaw/skills/xscrape/
+
+# fix permissions for node user (UID 1000)
+ssh root@<VPS_IP> "chown -R 1000:1000 /root/.openclaw/skills/xscrape/"
 ```
 
 ### 2. Connect to OpenClaw network
@@ -169,10 +174,11 @@ docker network connect openclaw_default xscrape
 docker exec openclaw-openclaw-gateway-1 curl -s http://xscrape:8080/health
 ```
 
-### 3. Verify skill is ready
+### 3. Restart gateway and verify
 
 ```bash
 cd /opt/openclaw
+docker compose restart openclaw-gateway
 docker compose run --rm openclaw-cli skills list | grep xscrape
 ```
 
