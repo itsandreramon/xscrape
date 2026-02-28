@@ -68,8 +68,8 @@ COPY xscrape/ /app/xscrape/
 COPY docker/entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
 
-# create directories for data persistence
-RUN mkdir -p /app/dist /data/chrome-profile
+# create output directory
+RUN mkdir -p /app/dist
 
 # expose ports
 # 9222 - chrome CDP
