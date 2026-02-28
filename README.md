@@ -152,10 +152,12 @@ To use xscrape as an OpenClaw skill:
 
 ### 1. Install skill
 
+The OpenClaw config directory is bind-mounted into the container:
+- **Host**: `/root/.openclaw/` → **Container**: `/home/node/.openclaw/`
+
 ```bash
-# copy skill to openclaw skills directory (mounted into container)
-# host path: /root/.openclaw/skills/xscrape/
-# container path: /home/node/.openclaw/skills/xscrape/
+# create skill directory and copy SKILL.md
+ssh root@<VPS_IP> "mkdir -p /root/.openclaw/skills/xscrape"
 scp SKILL.md root@<VPS_IP>:/root/.openclaw/skills/xscrape/
 
 # fix permissions for node user (UID 1000)
