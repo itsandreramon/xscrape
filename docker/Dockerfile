@@ -46,15 +46,8 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearm
 # create app directory
 WORKDIR /app
 
-# github token for private repo (build arg, used for /update endpoint)
-ARG GITHUB_TOKEN
-
-# clone repo for /update endpoint (skip if no token - CI builds don't need it)
-RUN if [ -n "$GITHUB_TOKEN" ]; then \
-        git clone https://${GITHUB_TOKEN}@github.com/itsandreramon/xscrape.git /app/repo; \
-    else \
-        mkdir -p /app/repo; \
-    fi
+# create empty repo dir (cloned at runtime via /update endpoint if GITHUB_TOKEN env is set)
+RUN mkdir -p /app/repo
 
 # create python venv and install dependencies
 RUN python3 -m venv /app/.venv

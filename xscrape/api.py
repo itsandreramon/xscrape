@@ -158,30 +158,53 @@ class XscrapeHandler(BaseHTTPRequestHandler):
         elif path == "/update":
             # pull latest code from git and restart
             try:
-                # configure git to use token for private repo
                 token = os.environ.get("GITHUB_TOKEN")
-                if token:
-                    repo_url = f"https://{token}@github.com/itsandreramon/xscrape.git"
-                    subprocess.run(
-                        ["git", "-C", "/app/repo", "remote", "set-url", "origin", repo_url],
-                        capture_output=True, timeout=10
+                repo_path = Path("/app/repo")
+                repo_url = f"https://{token}@github.com/itsandreramon/xscrape.git" if token else "https://github.com/itsandreramon/xscrape.git"
+
+                # clone if repo doesn't exist or is empty
+                if not (repo_path / ".git").exists():
+                    if not token:
+                        self.send_json({
+                            "status": "error",
+                            "error": "GITHUB_TOKEN required for initial clone of private repo"
+                        }, 400)
+                        return
+                    result = subprocess.run(
+                        ["git", "clone", repo_url, str(repo_path)],
+                        capture_output=True, text=True, timeout=60
+                    )
+                    if result.returncode != 0:
+                        self.send_json({
+                            "status": "error",
+                            "error": "git clone failed",
+                            "output": result.stderr
+                        }, 500)
+                        return
+                    git_output = "cloned repository"
+                else:
+                    # configure remote url with token
+                    if token:
+                        subprocess.run(
+                            ["git", "-C", str(repo_path), "remote", "set-url", "origin", repo_url],
+                            capture_output=True, timeout=10
+                        )
+
+                    # git pull
+                    result = subprocess.run(
+                        ["git", "-C", str(repo_path), "pull", "--ff-only"],
+                        capture_output=True, text=True, timeout=60
                     )
 
-                # git pull
-                result = subprocess.run(
-                    ["git", "-C", "/app/repo", "pull", "--ff-only"],
-                    capture_output=True, text=True, timeout=60
-                )
+                    if result.returncode != 0:
+                        self.send_json({
+                            "status": "error",
+                            "error": "git pull failed",
+                            "output": result.stderr
+                        }, 500)
+                        return
 
-                if result.returncode != 0:
-                    self.send_json({
-                        "status": "error",
-                        "error": "git pull failed",
-                        "output": result.stderr
-                    }, 500)
-                    return
-
-                git_output = result.stdout.strip()
+                    git_output = result.stdout.strip()
 
                 # check if already up to date
                 if "Already up to date" in git_output:
@@ -215,7 +238,6 @@ class XscrapeHandler(BaseHTTPRequestHandler):
                 def restart():
                     import time as t
                     t.sleep(1)
-                    import os
                     os.execv("/app/.venv/bin/python", ["/app/.venv/bin/python", "-m", "xscrape.api"])
                 threading.Thread(target=restart, daemon=True).start()
 
