@@ -62,5 +62,5 @@ X cookies expire. When scraping fails, re-export from browser:
 Run shellcheck before committing shell scripts:
 
 ```bash
-shellcheck -x -e SC1091 scripts/*.sh
+./scripts/lint.sh
 ```
