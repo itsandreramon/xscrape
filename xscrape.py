@@ -324,15 +324,9 @@ class FeedScraper:
         """scroll through feed collecting posts until cutoff time"""
 
         print("\nscrolling through feed...")
-        consecutive_old_posts = 0
-        max_consecutive_old = 5  # stop after seeing 5 consecutive old posts
         scroll_count = 0
 
-        # human behavior patterns
-        last_pause_scroll = 0
-        reading_session = 0  # track when human is "reading intensely"
-
-        while consecutive_old_posts < max_consecutive_old:
+        while True:
             scroll_count += 1
 
             # collect visible posts
@@ -343,10 +337,10 @@ class FeedScraper:
                 print("\nbrowser closed, saving collected posts...")
                 break
 
+            # stop immediately when we hit a post older than cutoff
             if has_old_post:
-                consecutive_old_posts += 1
-            else:
-                consecutive_old_posts = 0
+                print(f"\nreached post older than {self.hours} hours, stopping...")
+                break
 
             # progress update
             print(f"\rscroll {scroll_count}: {len(self.posts)} posts collected, "
