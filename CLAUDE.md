@@ -56,3 +56,11 @@ X cookies expire. When scraping fails, re-export from browser:
 2. Export cookies (EditThisCookie extension)
 3. Save as `cookies.json`
 4. Run `./scripts/inject-cookies.sh cookies.json root@<VPS_IP>`
+
+## Pre-commit
+
+Run shellcheck before committing shell scripts:
+
+```bash
+shellcheck -x -e SC1091 scripts/*.sh
+```
