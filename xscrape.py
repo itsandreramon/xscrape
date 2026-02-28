@@ -74,6 +74,7 @@ class FeedScraper:
         # give chrome time to start
         await asyncio.sleep(2)
 
+        browser = None
         async with async_playwright() as p:
             try:
                 # connect to existing chrome
@@ -98,6 +99,21 @@ class FeedScraper:
                 print("run this command manually first:")
                 print(f'\n  /Applications/Google\\ Chrome.app/Contents/MacOS/Google\\ Chrome --remote-debugging-port={self.debug_port} --user-data-dir="{self.user_data_dir or "~/.xscrape-chrome"}"')
                 sys.exit(1)
+            finally:
+                # close browser when done
+                if browser:
+                    try:
+                        await browser.close()
+                        print("browser closed")
+                    except Exception:
+                        pass
+
+        # kill chrome process if we launched it
+        if chrome_process:
+            try:
+                chrome_process.terminate()
+            except Exception:
+                pass
 
         self._export_xml()
         print(f"\ndone! collected {len(self.posts)} posts from {len(self._get_authors())} authors")
