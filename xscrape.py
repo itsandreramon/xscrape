@@ -52,6 +52,7 @@ class FeedScraper:
     slow_mo: int = 50
     debug_port: int = 9222
     feed_mode: str = "following-recent"  # for-you, following-recent, following-popular
+    include_reposts: bool = True  # include reposted content
 
     posts: list[Post] = field(default_factory=list)
     seen_ids: set[str] = field(default_factory=set)
@@ -484,6 +485,10 @@ class FeedScraper:
                 if post and post.id not in self.seen_ids:
                     self.seen_ids.add(post.id)
 
+                    # filter reposts if disabled
+                    if post.is_repost and not self.include_reposts:
+                        continue
+
                     # check if post is within our time window
                     if post.timestamp >= self.cutoff_time:
                         self.posts.append(post)
@@ -769,6 +774,12 @@ bot detection. Your existing Chrome sessions and extensions will be available.
         help="feed mode: for-you (algorithm), following-recent (chronological), following-popular (top posts) (default: following-recent)"
     )
 
+    parser.add_argument(
+        "--no-reposts",
+        action="store_true",
+        help="exclude reposts/retweets, only include original posts"
+    )
+
     return parser.parse_args()
 
 
@@ -783,6 +794,7 @@ async def main():
         slow_mo=args.slow_mo,
         debug_port=args.port,
         feed_mode=args.feed,
+        include_reposts=not args.no_reposts,
     )
 
     await scraper.run()
