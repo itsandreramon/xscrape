@@ -7,9 +7,7 @@ Includes caching to avoid redundant scrapes.
 
 import json
 import os
-import shutil
 import subprocess
-import threading
 import time
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -305,16 +303,16 @@ def main():
     port = 8080
     server = HTTPServer(("0.0.0.0", port), XscrapeHandler)
     print(f"[api] xscrape API server running on port {port}")
-    print(f"[api] endpoints:")
-    print(f"[api]   GET /health - health check")
-    print(f"[api]   GET /scrape?hours=1&feed=following-recent - run scraper (cached)")
-    print(f"[api]   GET /scrape?hours=1&force - force fresh scrape")
-    print(f"[api]   GET /scrape?hours=1&ttl=5 - custom cache TTL (minutes)")
-    print(f"[api]   GET /feed - get latest feed summary")
-    print(f"[api]   GET /feed/xml - get raw xml")
-    print(f"[api]   GET /cache/status - check cache status")
-    print(f"[api]   GET /cache/clear - clear cache")
-    print(f"[api]   GET /inject-cookies - inject cookies from /data/cookies.json")
+    print("[api] endpoints:")
+    print("[api]   GET /health - health check")
+    print("[api]   GET /scrape?hours=1&feed=following-recent - run scraper (cached)")
+    print("[api]   GET /scrape?hours=1&force - force fresh scrape")
+    print("[api]   GET /scrape?hours=1&ttl=5 - custom cache TTL (minutes)")
+    print("[api]   GET /feed - get latest feed summary")
+    print("[api]   GET /feed/xml - get raw xml")
+    print("[api]   GET /cache/status - check cache status")
+    print("[api]   GET /cache/clear - clear cache")
+    print("[api]   GET /inject-cookies - inject cookies from /data/cookies.json")
     server.serve_forever()
 
 

@@ -14,7 +14,6 @@ import random
 import re
 import subprocess
 import sys
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -63,7 +62,7 @@ class FeedScraper:
 
     async def run(self):
         """main entry point"""
-        print(f"starting x feed scraper")
+        print("starting x feed scraper")
         print(f"collecting posts from the last {self.hours} hours")
         print(f"cutoff time: {self.cutoff_time.isoformat()}")
         print(f"feed mode: {self.feed_mode}")
