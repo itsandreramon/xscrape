@@ -45,7 +45,7 @@ class Post:
 class FeedScraper:
     """scrapes x following feed with human-like scrolling behavior"""
 
-    hours: int = 2
+    hours: float = 0.5  # default 30 minutes for testing
     headless: bool = False
     output_path: Path = field(default_factory=lambda: Path("dist/feed.xml"))
     user_data_dir: Path | None = None
@@ -175,33 +175,22 @@ class FeedScraper:
             print("using 'for you' feed (default tab)")
             await self._human_delay(1000, 1500)
         elif self.feed_mode.startswith("following"):
-            # switch to following tab
-            await self._switch_to_following_tab(page)
+            # click on following tab to open dropdown menu
+            await self._open_following_dropdown(page)
 
-            # then set sort mode if recent
+            # select recent or popular from the dropdown
             if self.feed_mode == "following-recent":
-                # try clicking the sparkle icon to toggle to latest
-                await self._toggle_timeline_to_latest(page)
+                await self._select_from_dropdown(page, "Recent")
             else:  # following-popular
-                print("using popular/top sort (default for following)")
+                await self._select_from_dropdown(page, "Popular")
 
             # scroll to top to ensure we start from newest posts
             await self._scroll_to_top(page)
         else:
             print(f"unknown feed mode: {self.feed_mode}, using default")
 
-    async def _scroll_to_top(self, page: Page):
-        """scroll back to the top of the feed"""
-
-        try:
-            await page.evaluate("window.scrollTo(0, 0)")
-            await self._human_delay(500, 1000)
-            print("scrolled to top of feed")
-        except Exception as e:
-            print(f"note: couldn't scroll to top ({e})")
-
-    async def _switch_to_following_tab(self, page: Page):
-        """click on the following tab"""
+    async def _open_following_dropdown(self, page: Page):
+        """click on the following tab to open its dropdown menu"""
 
         try:
             # wait for tabs to be visible
@@ -209,8 +198,8 @@ class FeedScraper:
 
             # try multiple selectors for the following tab
             selectors = [
-                'a[href="/following"]:has-text("Following")',
                 '[role="tab"]:has-text("Following")',
+                'a[href="/following"]:has-text("Following")',
                 'a:has-text("Following")',
                 'span:text("Following")',
             ]
@@ -223,85 +212,54 @@ class FeedScraper:
 
             if following_tab:
                 await following_tab.click()
-                print("clicked following tab")
-                await self._human_delay(1500, 2500)
+                print("clicked following tab to open dropdown")
+                await self._human_delay(500, 800)
             else:
-                # might already be on following or layout changed
-                print("following tab not found, assuming already on following feed")
+                print("following tab not found")
         except Exception as e:
-            print(f"note: couldn't click following tab ({e}), continuing anyway")
+            print(f"note: couldn't click following tab ({e})")
 
-    async def _toggle_timeline_to_latest(self, page: Page):
-        """toggle timeline from top posts to latest using sparkle icon"""
+    async def _select_from_dropdown(self, page: Page, option: str):
+        """select an option (Recent/Popular) from the following dropdown"""
 
         try:
-            # wait for feed to settle
-            await self._human_delay(1000, 1500)
-
-            # the sparkle/stars icon at the top right toggles the sort
-            # it's usually in the navigation header area
-            # try finding it by aria-label or data-testid
-
-            # first, let's try finding any button with a sparkle/stars icon
-            sparkle_selectors = [
-                '[aria-label*="Top"]',
-                '[aria-label*="Timeline"]',
-                '[aria-label*="Latest"]',
-                '[data-testid="timelineHeader"] button',
-                'header button[aria-haspopup]',
-                'nav button[aria-haspopup]',
+            # look for the option in the dropdown menu
+            selectors = [
+                f'span:has-text("{option}")',
+                f'text="{option}"',
+                f'[role="menuitem"]:has-text("{option}")',
+                f'div:has-text("{option}"):not(:has(div))',
             ]
 
-            sparkle_button = None
-            for selector in sparkle_selectors:
+            for selector in selectors:
                 try:
-                    sparkle_button = await page.query_selector(selector)
-                    if sparkle_button:
-                        # check if it's visible and clickable
-                        is_visible = await sparkle_button.is_visible()
+                    menu_item = await page.query_selector(selector)
+                    if menu_item:
+                        is_visible = await menu_item.is_visible()
                         if is_visible:
-                            print(f"found sort button with selector: {selector}")
-                            break
-                        sparkle_button = None
+                            await menu_item.click()
+                            print(f"selected '{option}' from dropdown")
+                            await self._human_delay(1000, 1500)
+                            return
                 except Exception:
                     continue
 
-            if sparkle_button:
-                await sparkle_button.click()
-                await self._human_delay(500, 800)
-
-                # look for menu items - X uses "Recent" in a span
-                menu_selectors = [
-                    'span:has-text("Recent")',
-                    'text="Recent"',
-                    '[role="menuitem"]:has-text("Recent")',
-                    '[role="menuitem"]:has-text("Latest")',
-                    '[role="menuitem"]:has-text("latest")',
-                    'text="See latest posts instead"',
-                    'text="Latest"',
-                    '[data-testid="menuitem"]:has-text("Recent")',
-                ]
-
-                for selector in menu_selectors:
-                    try:
-                        menu_item = await page.query_selector(selector)
-                        if menu_item:
-                            await menu_item.click()
-                            print("switched to recent/chronological sort")
-                            await self._human_delay(1000, 1500)
-                            return
-                    except Exception:
-                        continue
-
-                # close menu if we couldn't find the option
-                await page.keyboard.press("Escape")
-                print("menu opened but 'Recent' option not found - may need manual selection")
-            else:
-                print("sort toggle button not found - x may have changed their ui")
-                print("tip: manually click the sparkle icon at top right to switch to 'Recent'")
+            # close dropdown if option not found
+            await page.keyboard.press("Escape")
+            print(f"'{option}' option not found in dropdown - may need manual selection")
 
         except Exception as e:
-            print(f"note: couldn't toggle to recent sort ({e})")
+            print(f"note: couldn't select {option} ({e})")
+
+    async def _scroll_to_top(self, page: Page):
+        """scroll back to the top of the feed"""
+
+        try:
+            await page.evaluate("window.scrollTo(0, 0)")
+            await self._human_delay(500, 1000)
+            print("scrolled to top of feed")
+        except Exception as e:
+            print(f"note: couldn't scroll to top ({e})")
 
     async def _handle_login_if_needed(self, page: Page):
         """detect and wait for manual login if needed"""
@@ -402,49 +360,48 @@ class FeedScraper:
                 await self._human_delay(800, 2200)
 
             # occasional long pause (checking phone, got distracted, reading a thread)
-            if random.random() < 0.08:
+            if random.random() < 0.06:
                 pause_duration = random.choice([
-                    (3000, 5000),   # short distraction
-                    (5000, 10000),  # medium distraction (checking notification)
-                    (10000, 20000), # long pause (reading replies or got distracted)
+                    (2000, 4000),   # short distraction
+                    (4000, 7000),   # medium distraction (checking notification)
                 ])
                 await self._human_delay(*pause_duration)
 
             # occasional scroll back up (re-reading something interesting)
-            if random.random() < 0.07:
-                back_scroll = random.randint(80, 250)
+            if random.random() < 0.05:
+                back_scroll = random.randint(100, 200)
                 try:
                     await self._smooth_scroll(page, -back_scroll, speed="slow")
                 except Exception:
                     break
-                await self._human_delay(1500, 3500)  # reading what caught attention
+                await self._human_delay(1500, 3000)  # reading what caught attention
                 # then scroll back down past where we were
-                forward_scroll = random.randint(back_scroll + 50, back_scroll + 200)
+                forward_scroll = random.randint(back_scroll + 50, back_scroll + 150)
                 try:
                     await self._smooth_scroll(page, forward_scroll, speed="normal")
                 except Exception:
                     break
-                await self._human_delay(500, 1000)
+                await self._human_delay(600, 1200)
 
             # occasional rapid multi-scroll (quickly getting past uninteresting content)
-            if random.random() < 0.05:
-                for _ in range(random.randint(2, 4)):
-                    quick_scroll = random.randint(400, 700)
+            if random.random() < 0.04:
+                for _ in range(random.randint(2, 3)):
+                    quick_scroll = random.randint(400, 600)
                     try:
                         await self._smooth_scroll(page, quick_scroll, speed="fast")
                     except Exception:
                         break
-                    await self._human_delay(200, 500)
+                    await self._human_delay(300, 600)
 
             # tiny micro-adjustments (human fine-tuning scroll position)
-            if random.random() < 0.12:
-                micro = random.randint(-30, 30)
+            if random.random() < 0.08:
+                micro = random.randint(-20, 20)
                 if micro != 0:
                     try:
                         await page.evaluate(f"window.scrollBy(0, {micro})")
                     except Exception:
                         pass
-                    await self._human_delay(100, 300)
+                    await self._human_delay(150, 400)
 
         print()  # newline after progress
 
@@ -766,9 +723,9 @@ bot detection. Your existing Chrome sessions and extensions will be available.
 
     parser.add_argument(
         "--hours", "-H",
-        type=int,
-        default=2,
-        help="number of hours to look back (default: 2)"
+        type=float,
+        default=0.5,
+        help="number of hours to look back (default: 0.5 = 30 minutes)"
     )
 
     parser.add_argument(
