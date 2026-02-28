@@ -1,0 +1,27 @@
+services:
+  xscrape:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: xscrape
+    ports:
+      - "6080:6080"   # noVNC - for manual browser access
+      - "8080:8080"   # API - for agent access
+    volumes:
+      - xscrape-data:/data
+      - /opt/xscrape/xscrape.py:/app/xscrape.py:ro
+      - /opt/xscrape/api.py:/app/api.py:ro
+      - /opt/xscrape/load_cookies.py:/app/load_cookies.py:ro
+      - /opt/xscrape/SKILL.md:/app/SKILL.md:ro
+    environment:
+      - VNC_PASSWORD=xscrape
+    networks:
+      - openclaw_default
+    restart: unless-stopped
+
+volumes:
+  xscrape-data:
+
+networks:
+  openclaw_default:
+    external: true

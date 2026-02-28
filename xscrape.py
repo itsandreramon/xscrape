@@ -325,6 +325,7 @@ class FeedScraper:
 
         print("\nscrolling through feed...")
         scroll_count = 0
+        consecutive_old = 0  # track consecutive scrolls with old posts
 
         while True:
             scroll_count += 1
@@ -337,10 +338,15 @@ class FeedScraper:
                 print("\nbrowser closed, saving collected posts...")
                 break
 
-            # stop immediately when we hit a post older than cutoff
+            # require 3 consecutive scrolls with old posts before stopping
+            # this handles pinned posts, promoted content, or out-of-order items
             if has_old_post:
-                print(f"\nreached post older than {self.hours} hours, stopping...")
-                break
+                consecutive_old += 1
+                if consecutive_old >= 3:
+                    print(f"\nreached posts older than {self.hours} hours, stopping...")
+                    break
+            else:
+                consecutive_old = 0  # reset if we find new posts
 
             # progress update
             print(f"\rscroll {scroll_count}: {len(self.posts)} posts collected, "
