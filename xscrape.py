@@ -184,8 +184,21 @@ class FeedScraper:
                 await self._toggle_timeline_to_latest(page)
             else:  # following-popular
                 print("using popular/top sort (default for following)")
+
+            # scroll to top to ensure we start from newest posts
+            await self._scroll_to_top(page)
         else:
             print(f"unknown feed mode: {self.feed_mode}, using default")
+
+    async def _scroll_to_top(self, page: Page):
+        """scroll back to the top of the feed"""
+
+        try:
+            await page.evaluate("window.scrollTo(0, 0)")
+            await self._human_delay(500, 1000)
+            print("scrolled to top of feed")
+        except Exception as e:
+            print(f"note: couldn't scroll to top ({e})")
 
     async def _switch_to_following_tab(self, page: Page):
         """click on the following tab"""
@@ -257,13 +270,16 @@ class FeedScraper:
                 await sparkle_button.click()
                 await self._human_delay(500, 800)
 
-                # look for menu items
+                # look for menu items - X uses "Recent" in a span
                 menu_selectors = [
+                    'span:has-text("Recent")',
+                    'text="Recent"',
+                    '[role="menuitem"]:has-text("Recent")',
                     '[role="menuitem"]:has-text("Latest")',
                     '[role="menuitem"]:has-text("latest")',
                     'text="See latest posts instead"',
                     'text="Latest"',
-                    '[data-testid="menuitem"]:has-text("Latest")',
+                    '[data-testid="menuitem"]:has-text("Recent")',
                 ]
 
                 for selector in menu_selectors:
@@ -271,7 +287,7 @@ class FeedScraper:
                         menu_item = await page.query_selector(selector)
                         if menu_item:
                             await menu_item.click()
-                            print("switched to latest/chronological sort")
+                            print("switched to recent/chronological sort")
                             await self._human_delay(1000, 1500)
                             return
                     except Exception:
@@ -279,13 +295,13 @@ class FeedScraper:
 
                 # close menu if we couldn't find the option
                 await page.keyboard.press("Escape")
-                print("menu opened but 'latest' option not found - may need manual selection")
+                print("menu opened but 'Recent' option not found - may need manual selection")
             else:
                 print("sort toggle button not found - x may have changed their ui")
-                print("tip: manually click the sparkle icon at top right to switch to 'Latest'")
+                print("tip: manually click the sparkle icon at top right to switch to 'Recent'")
 
         except Exception as e:
-            print(f"note: couldn't toggle to latest sort ({e})")
+            print(f"note: couldn't toggle to recent sort ({e})")
 
     async def _handle_login_if_needed(self, page: Page):
         """detect and wait for manual login if needed"""
